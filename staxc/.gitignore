@@ -1,0 +1,13 @@
+*.o
+*.a
+*.so
+*.so.*
+*.dll
+Makefile*
+staxc
+staxc.exe
+staxc1
+staxc1.exe
+xstaxc1
+xstaxc1.exe
+bootstrap/*/pass*

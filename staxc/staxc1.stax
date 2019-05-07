@@ -1,0 +1,322 @@
+i		staxc1
+		Copyright (C) Joshua Hudson 2018-2019
+Lz~{,sA1l++~F
+
+{"Usage: staxc1 architecture < file.stax > file.s"PLdP}
+|V0@"p-code"={{P}}{}?
+|V0@"x86_64-linux-gnu"={{
+  {"(p-code): Unknown instruction " s+PLdP}n
+  cz={{}n}{}?
+  c"PROGRAM"={{".globl main"P".text"P"main:"P"pushq %rbp"P"movq %rsp,%rbp"P
+               "call stax_startup"P
+               "call blkdef0"P"call stax_final"P"popq %rbp"P"ret"Pd}n}{}?
+  c"BEGIN ":[{{"BEGIN "z|e
+               c"block"s+":"+P
+                ".byte 255,255,255,255,5,0,0,0,1,0,0,0,1,0,0,0"P
+               c".quad blkdef"s+P
+                "blkdef"s+":"+P
+                "pushq %rbp"P"movq %rsp,%rbp"P}n}{}?
+  c"PUSH ":[{{"PUSH "z|e"leaq "s+"(%rip), %rdi"+P"call stax_push_element"P}n}{}?
+  c"CALL ":[{{"CALL ""call "|eP}n}{}?
+  c"END"={{"xorq %rax, %rax"P"popq %rbp"P"ret"P}n}{}?
+  c"DATA"={{}n}{}?
+  c"CONSTANT ":[{{"CONSTANT "z|e
+                "constant"s+":"+P}n}{}?
+  c"STRING ":[{{"STRING "'"+z|ec%c
+                ".byte 255,255,255,255,6,0,0,0"P
+                ".long "p$P".long "p$P
+                {".long "p$PF}n}{}?
+		TODO FIXME can't handle inline constants >= 2^64
+  c"INTEGER ":[{{"INTEGER "z|e
+                ".byte 255,255,255,255,1,0,0,0,1,0,0,0,1,0,0,0"P
+                ".quad "s+P}n}{}?
+  c"REAL ":[{{"REAL "z|e
+                ".byte 255,255,255,255,3,0,0,0,1,0,0,0,1,0,0,0"P
+                ".double "+P}n}{}?
+  d!dd
+}}{}?
+
+	(1) put assembler in global maps
+"assemble"s2l
+	
+	(2) compile all blocks
+	arguments: [0] = tokenized stax
+"compile-blocks"{
+  "blocks"z1lx2@!
+  "constants"zx2@!
+  "block-stack"zx2@!
+  "block-id"0x2@!
+  "block-counter"0x2@!
+  "block-depth"0x2@!
+  "first-instruction"1x2@!
+  "constant-counter"0x2@!
+  {
+    c'z={d'"}{}?
+    c'A={d.10}{}?
+    c0@c47>s58<|&{
+      "push-number"x1@!!'"s+"push-token-to-block"x1@!!
+    }{
+      c0@34={
+        "push-string"x1@!!'"s+"push-token-to-block"x1@!!
+      }{
+        c'{={
+          "block-stack"x1@!"block-stack"zx2@!"block-id"x1@!1l+"block-stack"sx2@!
+          "block-counter"x1@!1+"block-counter"sx2@!
+          "block-depth"x1@!1+"block-depth"sx2@!
+          "blocks"x1@!"blocks"zx2@!z1l+"blocks"sx2@!
+          "block-counter"x1@!"block-id"sx2@!
+          d
+        }{
+          c'G={
+            "TODO GOSUB command"PLdP
+          }{
+            "block-depth"x1@!{
+              c"fgkFwW}"sI1+{
+                "block-stack"x1@!z"block-stack"sx2@!	... close-command block-stack
+                c%~					... close-command block-stack       ... block-stack-len
+                rE,1-lr					... close-command prev-block-id block-stack
+                "block-stack"sx2@!			... close-command prev-block-id
+                "block-id"x1@!s				... close-command closed-block-id prev-block-id
+                "block-id"sx2@!				... close-command closed-block-id
+                '}s$+"push-token-to-block"x1@!!		... close-command 
+                "block-depth"x1@!1-"block-depth"sx2@!
+                c'}={d}{"push-token-to-block"x1@!!}?
+              }{
+                "push-token-to-block"x1@!!
+              }?
+            }{
+              c'}={
+                "TODO GOSUB block marker"PLdP
+              }{
+                c%{
+                  "push-token-to-block"x1@!!
+                }{
+                }?
+              }?
+            }?
+          }?
+        }?
+      }?
+    }?
+  F
+	It doesn't matter of we're missing } at end of program they're auto-evalutated
+}2l
+	(3) send a token into a block string
+"push-token-to-block"{
+  "blocks"x1@!			... <token> <blocks>
+     "blocks"zx2@!		prevents copying entire program per token compiled
+  "block-id"x1@!c~		... <token> <blocks> <block-id>		                   ... <block-id>
+  ns@a				... <blocks> <current-block> <token>                       ... <block-id>
+  n%!n' =|&{			... <blocks> <current-block> <token> <is-nop-droppable>    ... <block-id>
+    ,ddd			... <blocks>
+  }{
+    ;s~s~z&,,			prevents copying block per token compiled
+    1l+,s&			... <blocks>
+  }?
+  "blocks"sx2@!
+}2l
+	(4) push-string
+	arguments: ... string
+	return: ... " + constant-number (in string)
+"push-string"{
+  'ss+"push-constant"x1@!!
+}2l
+	(5) push-number
+	arguments: ... number (still in string)
+	return: ... " + constant-number (in string)
+"push-number"{
+  c33#{
+   '!'.|e'rs+"push-constant"x1@!!
+  }{
+   'is+"push-constant"x1@!!
+  }?
+}2l
+	(6) push-constant
+	arguments: ... constant string w/ prefix
+	returns: ... constant-number (in string)
+"push-constant"{
+  "constant-counter"x1@!~"constants"x1@!~
+  x0@s
+    x0,&Xd
+      cx1@!
+      c{sd}{d,c~$x2@!,c1+~$}?
+    x0@~
+  xa0s& Xd
+  "constants",x2@!"constant-counter",x2@!
+}2l
+ 	(7) compile tokens with constants replaced
+"compile-tokens"{
+  0Yd
+  "PROGRAM""assemble"x1@!!
+  "blocks"x1@!{
+    "BEGIN "y$+ "assemble"x1@!!
+    {
+      {"(block): Unknown command "s+PLdP}n
+      c'":[{{'"z|e"PUSH constant"s+}n}{}?
+      c'}:[{{'}z|e"PUSH block"s+}n}{}?
+      c' ={{dz}n}{}?
+      c'a={{d"CALL stax_alter"}n}{}?
+      c'b={{d"CALL stax_both_copy"}n}{}?
+      c'c={{d"CALL stax_copy"}n}{}?
+      c'd={{d"CALL stax_discard"}n}{}?
+      c'i={{dz}n}{}?
+      c'l={{d"CALL stax_listify"}n}{}?
+      c'n={{d"CALL stax_next"}n}{}?
+      c'p={{d"CALL stax_print"}n}{}?
+      c'r={{d"CALL stax_reverse_range"}n}{}?
+      c's={{d"CALL stax_swap"}n}{}?
+      c'x={{d"CALL stax_regread_x"}n}{}?
+      c'y={{d"CALL stax_regread_y"}n}{}?
+      c'E={{d"CALL stax_explode"}n}{}?
+      c'F={{d"CALL stax_foreach"}n}{}?
+      c'I={{d"CALL stax_indexof"}n}{}?
+      c'L={{d"CALL stax_listify_all"}n}{}?
+      c'O={{d"CALL tuck1"}n}{}?
+      c'P={{d"CALL stax_println"}n}{}?
+      c'X={{d"CALL stax_regwrite_x"}n}{}?
+      c'Y={{d"CALL stax_regwrite_y"}n}{}?
+      c'Z={{d"CALL stax_tuck0"}n}{}?
+      c'!={{d"CALL stax_inverse"}n}{}?
+      c'+={{d"CALL stax_add"}n}{}?
+      c'-={{d"CALL stax_subtract"}n}{}?
+      c'*={{d"CALL stax_times"}n}{}?
+      c'=={{d"CALL stax_equals"}n}{}?
+      c'<={{d"CALL stax_less"}n}{}?
+      c'>={{d"CALL stax_greater"}n}{}?
+      c'?={{d"CALL stax_ifelse"}n}{}?
+      c'[={{d"CALL stax_under"}n}{}?
+      c'%={{d"CALL stax_modulus"}n}{}?
+      c'@={{d"CALL stax_at"}n}{}?
+      c'&={{d"CALL stax_ampersand"}n}{}?
+      c'$={{d"CALL stax_stringify"}n}{}?
+      c'#={{d"CALL stax_countinstances"}n}{}?
+      c'~={{d"CALL stax_input_push"}n}{}?
+      c';={{d"CALL stax_input_peek"}n}{}?
+      c',={{d"CALL stax_input_pop"}n}{}?
+      c.|d={{d"CALL stax_main_depth"}n}{}?
+      c.|D={{d"CALL stax_input_depth"}n}{}?
+      c.|e={{d"CALL stax_replacefront"}n}{}?
+      c.:[={{d"CALL stax_startswith"}n}{}?
+      c.|V={{d"CALL stax_commandline"}n}{}?
+      c.|&={{d"CALL stax_bitand"}n}{}?
+		block special pseudo-commands (these start with { which no real token can start with)
+      c.{s={{d"CALL stax_clearstartupflag"}n}{}?
+      d!"assemble"x1@!!dd
+    F"END""assemble"x1@!!
+    y1+Yd
+  F
+}2l
+	(8) Compile data segment left over from compile-blocks
+"compile-ds"{
+  "DATA""assemble"x1@!!
+  "constants"x1@!{
+    E"CONSTANT "s+"assemble"x1@!!
+    {"(constant): Unknown form "s+PLdP}n
+    c's:[{{'sz|e"STRING "s+}n}{}?
+    c'i:[{{'iz|e"INTEGER "s+}n}{}?
+    c'r:[{{'rz|e"REAL "s+}n}{}?
+    d!"assemble"x1@!!dd
+  F
+}2l
+
+8l
+
+	map-fetch (X register) ... key
+{xsxzXd0@{nsb0@={1@Xd}{d}?dF dxsXd }
+	map-write (X register) ... key value
+{2l x2@sx1@sc0@~x~ 1lXd,0@,s{nsb0@={d}{1lx+Xd}?dFd xsa3lXd}
+3lXd
+
+0	Stax lexer
+{	Read instruction helper function
+  c":|V"#{
+    1l~
+    1y0a&Yd
+  }{
+    c''={
+      d
+      '"1l~
+      2y0a&Yd
+    }{
+      c'.={
+        d
+        '"1l~
+        3y0a&Yd
+      }{
+        c9={
+          d
+          5y0a&Yd
+        }{
+          c'"={
+            1l~
+            6y0a&Yd
+          }{
+            cA={
+              d
+            }{
+              c48>n58<|&{
+                1l~
+                4y0a&Yd
+              }{
+                1l1l
+                ,s+~
+              }?
+            }?
+          }?
+        }?
+      }?
+    }?
+  }?
+}
+2lYd
+,z~{
+  {"lexer state hosed near "s+PLdP}n
+  0y0@={{		State 0 = read instruction
+    y1@!
+  }n}{}?
+  1y0@={{		State 1 = two-character instruction
+    1l,s+1l,s+~
+    0y0a&Yd
+  }n}{}?
+  2y0@={{		State 2 = one character constant
+    1l,s+1l,s+~
+    0y0a&Yd
+  }n}{}?
+  3y0@={{		State 3 = two character constant, first character
+    1l,s+~
+    2y0a&Yd
+  }n}{}?
+  4y0@={{		State 4 = gathering number
+    c33={
+      1l,s+~
+    }{
+      c47>n58<|&{
+        1l,s+~
+      }{
+        ,c.10={
+          d'1'0 2l,s+~
+        }{
+          1l,s+~
+        }?
+        0y0a&Yd
+        y1@!
+      }?  
+    }?
+  }n}{}?
+  5y0@={{		State 5 = eat comment to newline
+    A={0y0a&Yd}{}?
+  }n}{}?
+  6y0@={{		State 6 = build up double quote string
+    c'"={
+      d
+      ,1l,s+~
+      0y0a&Yd
+    }{
+      1l,s+~
+    }?
+  }n}{}?
+  d!dd
+F
+
+,"compile-blocks"x1@!!"compile-tokens"x1@!!"compile-ds"x1@!!
+d
